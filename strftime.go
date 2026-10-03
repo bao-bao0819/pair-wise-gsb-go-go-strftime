@@ -2,168 +2,52 @@ package strftime
 
 import (
 	"bytes"
-	"strconv"
 	"time"
 )
 
 // Format returns a textual representation of the time value
 // formatted according to the strftime format specification.
+//
+// The format is compiled on every call; prefer Compile for formats
+// used more than once.
 func Format(fmt string, t time.Time) string {
-	buf := buffer(fmt)
-	return string(AppendFormat(buf, fmt, t))
+	c, err := Compile(fmt)
+	if err != nil {
+		return fmt
+	}
+	return c.Format(t)
 }
 
 // AppendFormat is like Format, but appends the textual representation
 // to dst and returns the extended buffer.
 func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
-	var parser parser
-
-	parser.literal = func(b byte) error {
-		dst = append(dst, b)
-		return nil
+	c, err := Compile(fmt)
+	if err != nil {
+		return append(dst, fmt...)
 	}
-
-	parser.format = func(spec, flag byte) error {
-		switch spec {
-		case 'A':
-			dst = append(dst, t.Weekday().String()...)
-			return nil
-		case 'a':
-			dst = append(dst, t.Weekday().String()[:3]...)
-			return nil
-		case 'B':
-			dst = append(dst, t.Month().String()...)
-			return nil
-		case 'b', 'h':
-			dst = append(dst, t.Month().String()[:3]...)
-			return nil
-		case 'm':
-			dst = appendInt2(dst, int(t.Month()), flag)
-			return nil
-		case 'd':
-			dst = appendInt2(dst, int(t.Day()), flag)
-			return nil
-		case 'e':
-			dst = appendInt2(dst, int(t.Day()), ' ')
-			return nil
-		case 'I':
-			dst = append12Hour(dst, t, flag)
-			return nil
-		case 'l':
-			dst = append12Hour(dst, t, ' ')
-			return nil
-		case 'H':
-			dst = appendInt2(dst, t.Hour(), flag)
-			return nil
-		case 'k':
-			dst = appendInt2(dst, t.Hour(), ' ')
-			return nil
-		case 'M':
-			dst = appendInt2(dst, t.Minute(), flag)
-			return nil
-		case 'S':
-			dst = appendInt2(dst, t.Second(), flag)
-			return nil
-		case 'L':
-			dst = append(dst, t.Format(".000")[1:]...)
-			return nil
-		case 'f':
-			dst = append(dst, t.Format(".000000")[1:]...)
-			return nil
-		case 'N':
-			dst = append(dst, t.Format(".000000000")[1:]...)
-			return nil
-		case 'y':
-			dst = t.AppendFormat(dst, "06")
-			return nil
-		case 'Y':
-			dst = t.AppendFormat(dst, "2006")
-			return nil
-		case 'C':
-			century := century(t)
-			if century >= 0 && century < 10 {
-				dst = append(dst, '0')
-			}
-			dst = strconv.AppendInt(dst, int64(century), 10)
-			return nil
-		case 'U':
-			dst = appendWeekNumber(dst, t, flag, true)
-			return nil
-		case 'W':
-			dst = appendWeekNumber(dst, t, flag, false)
-			return nil
-		case 'V':
-			_, w := t.ISOWeek()
-			dst = appendInt2(dst, w, flag)
-			return nil
-		case 'g':
-			y, _ := t.ISOWeek()
-			dst = year(y).AppendFormat(dst, "06")
-			return nil
-		case 'G':
-			y, _ := t.ISOWeek()
-			dst = year(y).AppendFormat(dst, "2006")
-			return nil
-		case 's':
-			dst = strconv.AppendInt(dst, t.Unix(), 10)
-			return nil
-		case 'Q':
-			dst = strconv.AppendInt(dst, t.UnixMilli(), 10)
-			return nil
-		case 'w':
-			w := t.Weekday()
-			dst = appendInt1(dst, int(w))
-			return nil
-		case 'u':
-			if w := t.Weekday(); w == 0 {
-				dst = append(dst, '7')
-			} else {
-				dst = appendInt1(dst, int(w))
-			}
-			return nil
-		case 'j':
-			if flag == '-' {
-				dst = strconv.AppendInt(dst, int64(t.YearDay()), 10)
-			} else {
-				dst = t.AppendFormat(dst, "002")
-			}
-			return nil
-		}
-
-		if layout := goLayout(spec, flag, false); layout != "" {
-			dst = t.AppendFormat(dst, layout)
-			return nil
-		}
-
-		dst = append(dst, '%')
-		if flag != 0 {
-			dst = append(dst, flag)
-		}
-		dst = append(dst, spec)
-		return nil
-	}
-
-	parser.parse(fmt)
-	return dst
+	return c.AppendFormat(dst, t)
 }
 
-// Parse converts a textual representation of time to the time value it represents
-// according to the strptime format specification.
+// Parse converts a textual representation of time to the time value it
+// represents according to the strptime format specification.
+//
+// Literal text is matched verbatim and may freely contain digits and
+// sequences such as "2006", "Jan", "Mon", "MST" or "PM", as well as
+// arbitrary UTF-8 text. Repeated date fields must agree, and trailing
+// input is an error.
 //
 // The following specifiers are not supported for parsing:
 //
 //	%g %k %l %s %u %w %C %G %Q %U %V %W
 //
-// You must also avoid digits and these letter sequences
-// in fmt literals:
-//
-//	Jan Mon MST PM pm
+// The format is compiled on every call; prefer CompileParse for formats
+// used more than once.
 func Parse(fmt, value string) (time.Time, error) {
-	pattern, err := layout(fmt, true)
+	c, err := CompileParse(fmt)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return time.Parse(pattern, value)
+	return c.Parse(value)
 }
 
 // Layout converts a strftime format specification
