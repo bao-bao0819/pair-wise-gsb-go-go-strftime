@@ -150,15 +150,26 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 // Parse converts a textual representation of time to the time value it represents
 // according to the strptime format specification.
 //
+// ISO 8601 week-based dates are supported:
+// %G or %g (week-based year), %V (week number) and %u or %w (weekday)
+// together determine the date, and all three are required.
+// The week number must exist in the week-based year.
+// Two-digit week-based years (%g) are expanded using WeekYearPivot.
+// If the format also specifies a calendar date (%Y, %m and %d, or %Y and %j),
+// both representations must identify the same day.
+//
 // The following specifiers are not supported for parsing:
 //
-//	%g %k %l %s %u %w %C %G %Q %U %V %W
+//	%k %l %s %C %Q %U %W
 //
 // You must also avoid digits and these letter sequences
-// in fmt literals:
+// in fmt literals, unless the format contains week-based specifiers:
 //
 //	Jan Mon MST PM pm
 func Parse(fmt, value string) (time.Time, error) {
+	if hasWeekSpecifiers(fmt) {
+		return parseWeek(fmt, value)
+	}
 	pattern, err := layout(fmt, true)
 	if err != nil {
 		return time.Time{}, err
