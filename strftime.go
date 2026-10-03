@@ -3,6 +3,7 @@ package strftime
 import (
 	"bytes"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -150,15 +151,25 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 // Parse converts a textual representation of time to the time value it represents
 // according to the strptime format specification.
 //
+// ISO 8601 week dates are supported: %G (or %g), %V and %u must be used
+// together, and determine the calendar date. If calendar date directives
+// (like %Y, %m, %d or %j) are also present, both must agree on the date.
+// Two-digit week-based years (%g) are expanded using PivotYear.
+//
 // The following specifiers are not supported for parsing:
 //
-//	%g %k %l %s %u %w %C %G %Q %U %V %W
+//	%k %l %s %w %C %Q %U %W
 //
 // You must also avoid digits and these letter sequences
 // in fmt literals:
 //
 //	Jan Mon MST PM pm
 func Parse(fmt, value string) (time.Time, error) {
+	if strings.ContainsAny(fmt, "GgVu") {
+		if t, ok, err := parseWeekDate(fmt, value); ok || err != nil {
+			return t, err
+		}
+	}
 	pattern, err := layout(fmt, true)
 	if err != nil {
 		return time.Time{}, err

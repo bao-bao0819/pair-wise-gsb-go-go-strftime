@@ -62,6 +62,8 @@ The following formatting specifiers are available:
 	  %V - Week number of the week-based year (01..53)
 	          %-V  no-padded (1..53)
 
+	Week dates are parsed if %G (or %g), %V and %u are used together.
+
 	Week number:
 	Week 1 of YYYY starts with a Sunday or Monday (according to %U or %W).
 	The days in the year before the first week are in week 0.
