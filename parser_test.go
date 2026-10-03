@@ -7,7 +7,7 @@ import (
 
 func Test_parser_literals(t *testing.T) {
 	var noliterals parser
-	noliterals.format = func(spec, flag byte) error { return nil }
+	noliterals.format = func(spec, flag byte, offset int) error { return nil }
 	noliterals.literal = func(b byte) error { return errors.New("no literals") }
 
 	for _, tt := range []string{"%+", "%c"} {

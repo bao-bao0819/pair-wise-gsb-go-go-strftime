@@ -92,5 +92,14 @@ The following formatting specifiers are available:
 	  %+ - date(1) (%a %b %e %H:%M:%S %Z %Y)
 
 The modifiers “E” and “O” are ignored.
+
+# Compiled specifications
+
+[Compile] parses a format into a reusable [Spec] that cleanly separates
+literal text from time directives, so literals may contain digits and
+letter sequences such as “2006”, “Jan”, “Mon”, “MST” or “PM” that the
+[Layout] conversion cannot represent. The resulting [Spec] supports both
+[Spec.Format] and [Spec.Parse], rejects trailing input, and is safe for
+concurrent use.
 */
 package strftime

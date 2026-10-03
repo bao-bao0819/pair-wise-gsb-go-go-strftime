@@ -2,7 +2,6 @@ package strftime
 
 import (
 	"bytes"
-	"strconv"
 	"time"
 )
 
@@ -23,118 +22,11 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 		return nil
 	}
 
-	parser.format = func(spec, flag byte) error {
-		switch spec {
-		case 'A':
-			dst = append(dst, t.Weekday().String()...)
-			return nil
-		case 'a':
-			dst = append(dst, t.Weekday().String()[:3]...)
-			return nil
-		case 'B':
-			dst = append(dst, t.Month().String()...)
-			return nil
-		case 'b', 'h':
-			dst = append(dst, t.Month().String()[:3]...)
-			return nil
-		case 'm':
-			dst = appendInt2(dst, int(t.Month()), flag)
-			return nil
-		case 'd':
-			dst = appendInt2(dst, int(t.Day()), flag)
-			return nil
-		case 'e':
-			dst = appendInt2(dst, int(t.Day()), ' ')
-			return nil
-		case 'I':
-			dst = append12Hour(dst, t, flag)
-			return nil
-		case 'l':
-			dst = append12Hour(dst, t, ' ')
-			return nil
-		case 'H':
-			dst = appendInt2(dst, t.Hour(), flag)
-			return nil
-		case 'k':
-			dst = appendInt2(dst, t.Hour(), ' ')
-			return nil
-		case 'M':
-			dst = appendInt2(dst, t.Minute(), flag)
-			return nil
-		case 'S':
-			dst = appendInt2(dst, t.Second(), flag)
-			return nil
-		case 'L':
-			dst = append(dst, t.Format(".000")[1:]...)
-			return nil
-		case 'f':
-			dst = append(dst, t.Format(".000000")[1:]...)
-			return nil
-		case 'N':
-			dst = append(dst, t.Format(".000000000")[1:]...)
-			return nil
-		case 'y':
-			dst = t.AppendFormat(dst, "06")
-			return nil
-		case 'Y':
-			dst = t.AppendFormat(dst, "2006")
-			return nil
-		case 'C':
-			century := century(t)
-			if century >= 0 && century < 10 {
-				dst = append(dst, '0')
-			}
-			dst = strconv.AppendInt(dst, int64(century), 10)
-			return nil
-		case 'U':
-			dst = appendWeekNumber(dst, t, flag, true)
-			return nil
-		case 'W':
-			dst = appendWeekNumber(dst, t, flag, false)
-			return nil
-		case 'V':
-			_, w := t.ISOWeek()
-			dst = appendInt2(dst, w, flag)
-			return nil
-		case 'g':
-			y, _ := t.ISOWeek()
-			dst = year(y).AppendFormat(dst, "06")
-			return nil
-		case 'G':
-			y, _ := t.ISOWeek()
-			dst = year(y).AppendFormat(dst, "2006")
-			return nil
-		case 's':
-			dst = strconv.AppendInt(dst, t.Unix(), 10)
-			return nil
-		case 'Q':
-			dst = strconv.AppendInt(dst, t.UnixMilli(), 10)
-			return nil
-		case 'w':
-			w := t.Weekday()
-			dst = appendInt1(dst, int(w))
-			return nil
-		case 'u':
-			if w := t.Weekday(); w == 0 {
-				dst = append(dst, '7')
-			} else {
-				dst = appendInt1(dst, int(w))
-			}
-			return nil
-		case 'j':
-			if flag == '-' {
-				dst = strconv.AppendInt(dst, int64(t.YearDay()), 10)
-			} else {
-				dst = t.AppendFormat(dst, "002")
-			}
+	parser.format = func(spec, flag byte, offset int) error {
+		var ok bool
+		if dst, ok = appendSpecifier(dst, spec, flag, t); ok {
 			return nil
 		}
-
-		if layout := goLayout(spec, flag, false); layout != "" {
-			dst = t.AppendFormat(dst, layout)
-			return nil
-		}
-
 		dst = append(dst, '%')
 		if flag != 0 {
 			dst = append(dst, flag)
@@ -154,16 +46,14 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 //
 //	%g %k %l %s %u %w %C %G %Q %U %V %W
 //
-// You must also avoid digits and these letter sequences
-// in fmt literals:
-//
-//	Jan Mon MST PM pm
+// Use Compile when the format is used more than once, or when fmt literals
+// must contain text such as digits, “Jan”, “Mon”, “MST” or “PM”.
 func Parse(fmt, value string) (time.Time, error) {
-	pattern, err := layout(fmt, true)
+	spec, err := Compile(fmt)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return time.Parse(pattern, value)
+	return spec.Parse(value)
 }
 
 // Layout converts a strftime format specification
@@ -207,7 +97,7 @@ func layout(fmt string, parsing bool) (string, error) {
 		return nil
 	}
 
-	parser.format = func(spec, flag byte) error {
+	parser.format = func(spec, flag byte, offset int) error {
 		if layout := goLayout(spec, flag, parsing); layout != "" {
 			dst = append(dst, layout...)
 			return nil
@@ -265,7 +155,7 @@ func UTS35(fmt string) (string, error) {
 		return nil
 	}
 
-	parser.format = func(spec, flag byte) error {
+	parser.format = func(spec, flag byte, offset int) error {
 		if quoted {
 			dst = append(dst, quote)
 			quoted = false

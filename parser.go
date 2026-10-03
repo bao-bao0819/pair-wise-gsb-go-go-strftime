@@ -3,8 +3,9 @@ package strftime
 import "unicode/utf8"
 
 type parser struct {
-	format  func(spec, flag byte) error
+	format  func(spec, flag byte, offset int) error
 	literal func(byte) error
+	pos     int
 }
 
 func (p *parser) parse(fmt string) error {
@@ -19,7 +20,9 @@ func (p *parser) parse(fmt string) error {
 	var err error
 	state := initial
 	start := 0
-	for i, b := range []byte(fmt) {
+	for i := 0; i < len(fmt); i++ {
+		b := fmt[i]
+		p.pos = i
 		switch state {
 		default:
 			if b == '%' {
@@ -41,7 +44,7 @@ func (p *parser) parse(fmt string) error {
 				flag = 0
 				continue
 			}
-			err = p.format(b, 0)
+			err = p.format(b, 0, start)
 			state = initial
 
 		case flagged:
@@ -50,12 +53,12 @@ func (p *parser) parse(fmt string) error {
 				modifier = b
 				continue
 			}
-			err = p.format(b, flag)
+			err = p.format(b, flag, start)
 			state = initial
 
 		case modified:
 			if okModifier(modifier, b) {
-				err = p.format(b, flag)
+				err = p.format(b, flag, start)
 			} else {
 				err = p.literals(fmt[start : i+1])
 			}
