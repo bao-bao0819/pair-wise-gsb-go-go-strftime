@@ -92,5 +92,16 @@ The following formatting specifiers are available:
 	  %+ - date(1) (%a %b %e %H:%M:%S %Z %Y)
 
 The modifiers “E” and “O” are ignored.
+The package-level [Format], [AppendFormat], and [Parse] functions always
+use the built-in English month, weekday, and meridiem names and never
+consult the operating system language configuration.
+
+To localize the names rendered by %A, %a, %B, %b/%h, %p, and %P (and the
+combinations %c, %+, %r, and so on), build a [Locale] with [NewLocale]
+and use [Locale.Format], [Locale.AppendFormat], or [Locale.Parse].
+A Locale holds the full and abbreviated names, meridiem markers, and
+optional combination formats. Input names are matched exactly first and
+then under simple case folding; the longest name that can complete the
+current directive wins. Two Locales may be used concurrently.
 */
 package strftime
