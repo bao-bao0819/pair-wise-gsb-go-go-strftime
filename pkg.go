@@ -92,5 +92,8 @@ The following formatting specifiers are available:
 	  %+ - date(1) (%a %b %e %H:%M:%S %Z %Y)
 
 The modifiers “E” and “O” are ignored.
+
+Analyze statically reports whether a format carries enough information
+for its output to be parsed back into the original time.
 */
 package strftime
