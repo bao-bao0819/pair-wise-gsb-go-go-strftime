@@ -92,5 +92,17 @@ The following formatting specifiers are available:
 	  %+ - date(1) (%a %b %e %H:%M:%S %Z %Y)
 
 The modifiers “E” and “O” are ignored.
+
+Analyze statically inspects a format and reports whether a value written
+with it can be read back to the same instant. It expands compound
+directives (%c, %F, %T, …) into their atomic pieces instead of guessing
+from a formatted sample, and returns the date, time, precision and
+time-zone fields present together with a Verdict (reversible,
+conditional, unparseable) and Findings that name the exact directive and
+reason (missing AM/PM for a 12-hour hour, a two-digit-year pivot window,
+an incomplete ISO week date, a time-zone abbreviation that does not fix
+the offset, sub-second truncation, conflicting fields, and so on).
+Report.RoundTrip optionally checks one concrete time.Time; it reports the
+difference but never overrides the static verdict.
 */
 package strftime
