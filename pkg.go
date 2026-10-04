@@ -1,6 +1,10 @@
 /*
 Package strftime provides strftime/strptime compatible time formatting and parsing.
 
+Formatting and parsing use English names by default.
+Use NewLocale to format and parse localized month, weekday
+and meridiem names without consulting the operating system.
+
 The following formatting specifiers are available:
 
 	Date (Year, Month, Day):

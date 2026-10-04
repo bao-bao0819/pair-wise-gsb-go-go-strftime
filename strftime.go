@@ -16,6 +16,10 @@ func Format(fmt string, t time.Time) string {
 // AppendFormat is like Format, but appends the textual representation
 // to dst and returns the extended buffer.
 func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
+	return appendFormat(dst, fmt, t, nil)
+}
+
+func appendFormat(dst []byte, fmt string, t time.Time, loc *Locale) []byte {
 	var parser parser
 
 	parser.literal = func(b byte) error {
@@ -26,17 +30,42 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 	parser.format = func(spec, flag byte) error {
 		switch spec {
 		case 'A':
-			dst = append(dst, t.Weekday().String()...)
+			if loc != nil {
+				dst = append(dst, loc.weekdays[t.Weekday()]...)
+			} else {
+				dst = append(dst, t.Weekday().String()...)
+			}
 			return nil
 		case 'a':
-			dst = append(dst, t.Weekday().String()[:3]...)
+			if loc != nil {
+				dst = append(dst, loc.weekdaysAbbr[t.Weekday()]...)
+			} else {
+				dst = append(dst, t.Weekday().String()[:3]...)
+			}
 			return nil
 		case 'B':
-			dst = append(dst, t.Month().String()...)
+			if loc != nil {
+				dst = append(dst, loc.months[t.Month()-1]...)
+			} else {
+				dst = append(dst, t.Month().String()...)
+			}
 			return nil
 		case 'b', 'h':
-			dst = append(dst, t.Month().String()[:3]...)
+			if loc != nil {
+				dst = append(dst, loc.monthsAbbr[t.Month()-1]...)
+			} else {
+				dst = append(dst, t.Month().String()[:3]...)
+			}
 			return nil
+		case 'p', 'P':
+			if loc != nil {
+				if t.Hour() < 12 {
+					dst = append(dst, loc.ampm[0]...)
+				} else {
+					dst = append(dst, loc.ampm[1]...)
+				}
+				return nil
+			}
 		case 'm':
 			dst = appendInt2(dst, int(t.Month()), flag)
 			return nil
