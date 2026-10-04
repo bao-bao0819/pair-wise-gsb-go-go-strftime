@@ -72,6 +72,11 @@ The following formatting specifiers are available:
 
 	Seconds since the Unix Epoch:
 	  %s - Number of seconds since 1970-01-01 00:00:00 UTC.
+	       On parsing, %s may be followed immediately by a '.' or ',' and
+	       one %L, %f or %N directive giving the decimal fraction of a
+	       second; the fraction is parsed with exact integer (nanosecond)
+	       precision. For example -0.250 denotes a quarter second before
+	       the epoch. %Q is milliseconds and cannot carry a fraction.
 	  %Q - Number of milliseconds since 1970-01-01 00:00:00 UTC.
 
 	Literal string:

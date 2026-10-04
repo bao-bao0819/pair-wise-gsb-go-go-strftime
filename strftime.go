@@ -152,13 +152,25 @@ func AppendFormat(dst []byte, fmt string, t time.Time) []byte {
 //
 // The following specifiers are not supported for parsing:
 //
-//	%g %k %l %s %u %w %C %G %Q %U %V %W
+//	%g %k %l %u %w %C %G %U %V %W
+//
+// %s parses seconds and %Q milliseconds since the Unix epoch with exact
+// integer (nanosecond) precision; %s may be followed by a '.' or ',' and a
+// single %L, %f or %N giving the decimal fraction of a second.
 //
 // You must also avoid digits and these letter sequences
 // in fmt literals:
 //
 //	Jan Mon MST PM pm
 func Parse(fmt, value string) (time.Time, error) {
+	if hasEpoch(fmt) {
+		tokens := tokenize(fmt)
+		p, err := compileEpoch(tokens)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return parseEpoch(p, value)
+	}
 	pattern, err := layout(fmt, true)
 	if err != nil {
 		return time.Time{}, err
